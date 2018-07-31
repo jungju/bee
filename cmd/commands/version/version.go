@@ -26,7 +26,7 @@ const verboseVersionBanner string = `%s%s______
 | |_/ /  ___   ___
 | ___ \ / _ \ / _ \
 | |_/ /|  __/|  __/
-\____/  \___| \___| v{{ .BeeVersion }}%s
+\____/  \___| \___| v{{ .BeeVersion }}%s (JJGO)
 %s%s
 ├── Beego     : {{ .BeegoVersion }}
 ├── GoVersion : {{ .GoVersion }}

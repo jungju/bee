@@ -78,7 +78,8 @@ var basicTypes = map[string]string{
 	"byte":       "string:byte",
 	"rune":       "string:byte",
 	// builtin golang objects
-	"time.Time": "string:datetime",
+	"time.Time":    "string:datetime",
+	"&{time Time}": "string:string",
 }
 
 var stdlibObject = map[string]string{
@@ -673,6 +674,9 @@ func parserComments(f *ast.FuncDecl, controllerName, pkgpath string) error {
 				default:
 					para.Description = strings.Trim(p[3], `" `)
 				}
+				//jungju
+				para.Default = str2RealType("1", para.Type)
+
 				opts.Parameters = append(opts.Parameters, para)
 			} else if strings.HasPrefix(t, "@Failure") {
 				rs := swagger.Response{}
@@ -921,6 +925,9 @@ func getModel(str string) (objectname string, m swagger.Schema, realTypes []stri
 			}
 		}
 	}
+	if objectname[:4] == "Base" {
+		return
+	}
 	if m.Title == "" {
 		beeLogger.Log.Warnf("Cannot find the object: %s", str)
 		// TODO remove when all type have been supported
@@ -930,6 +937,9 @@ func getModel(str string) (objectname string, m swagger.Schema, realTypes []stri
 		rootapi.Definitions = make(map[string]swagger.Schema)
 	}
 	objectname = packageName + "." + objectname
+	if packageName == "" {
+		return
+	}
 	rootapi.Definitions[objectname] = m
 	return
 }
@@ -1045,10 +1055,22 @@ func parseIdent(st *ast.Ident, k string, m *swagger.Schema, astPkgs []*ast.Packa
 }
 
 func parseStruct(st *ast.StructType, k string, m *swagger.Schema, realTypes *[]string, astPkgs []*ast.Package, packageName string) {
-	m.Title = k
+	if m.Title == "" {
+		m.Title = k
+	}
 	if st.Fields.List != nil {
 		m.Properties = make(map[string]swagger.Propertie)
+	FIELD_LOOP:
 		for _, field := range st.Fields.List {
+			fmt.Println(field.Names)
+			for _, name := range field.Names {
+				firstChar := name.Name[:1]
+				fmt.Println(firstChar)
+				if firstChar == strings.ToLower(firstChar) {
+					continue FIELD_LOOP
+				}
+			}
+
 			isSlice, realType, sType := typeAnalyser(field)
 			if (isSlice && isBasicType(realType)) || sType == "object" {
 				if len(strings.Split(realType, " ")) > 1 {
@@ -1306,8 +1328,10 @@ func str2RealType(s string, typ string) interface{} {
 		ret, err = strconv.ParseFloat(s, 64)
 	case "float32":
 		ret, err = strconv.ParseFloat(s, 32)
-	default:
+	case "string":
 		return s
+	default:
+		return nil
 	}
 
 	if err != nil {
